@@ -125,7 +125,7 @@ class SCA:
         solution = np.clip(solution, self.Xmin, self.Xmax)
         return solution
 
-    def optimize(self, fitness_function):
+    def optimize(self, fitness_function, verbose=False):
         """
         Main SCA optimization loop.
         Follows Algorithm 1 (pseudo code) from paper exactly.
@@ -196,13 +196,13 @@ class SCA:
             self.convergence_curve.append(self.Fbest)
 
             # Print progress every 100 iterations
-            if t % 100 == 0:
+            if verbose and t % 100 == 0:
                 print(f"  Iteration {t}/{self.T} | "
                       f"Best Fitness: {self.Fbest:.6f}")
 
         return self.Xbest, self.Fbest, self.convergence_curve
 
-        def reset(self):
+    def reset(self):
             """
             Reset algorithm to initial state.
             Used when running multiple independent experiments (30 runs).

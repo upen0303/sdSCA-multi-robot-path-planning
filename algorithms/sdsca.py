@@ -310,7 +310,7 @@ class sdSCA:
         """Keep solution within [Xmin, Xmax]"""
         return np.clip(solution, self.Xmin, self.Xmax)
     
-    def optimize(self, fitness_function):
+    def optimize(self, fitness_function, verbose=False):
         """
         Main sdSCA optimization loop.
         Follows Algorithm 2 (pseudo code) from paper exactly.
@@ -319,6 +319,9 @@ class sdSCA:
         -----------
         fitness_function : callable
             Function to minimize.
+        
+        verbose : bool
+            Whether to print progress updates.
         
         Returns:
         --------
@@ -388,7 +391,7 @@ class sdSCA:
             self.convergence_curve.append(self.Fbest)
 
             # Progress report
-            if t % 100 == 0:
+            if verbose and t % 100 == 0:
                 print(f"  Iter {t}/{self.T} | "
                       f"Best: {self.Fbest:.6f} | "
                       f"Strategy probs: "
