@@ -37,6 +37,10 @@ from algorithms.sdsca          import sdSCA
 # ══════════════════════════════════════════════════════════════
 
 NUM_RUNS       = 3      # set to 30 for paper results
+MAX_STEPS      = 300    # max simulation steps per run
+OPT_ITERATIONS = 100    # optimizer iterations per step
+POPULATION     = 30     # population size
+
 # ── Per scenario max steps ─────────────────────────────────
 SCENARIO_MAX_STEPS = {
     1: 300,    # 6 robots  — 300 enough
@@ -48,7 +52,7 @@ POPULATION     = 30     # population size
 
 # Algorithms to compare
 # Add more here later (SFS, AOA, WOA, HHO)
-ALGORITHMS = ['SCA', 'sdSCA']
+ALGORITHMS = ['SCA', 'sdSCA', 'qlsdSCA']
 
 # Scenarios to run
 SCENARIOS = [1, 2, 3]
@@ -92,6 +96,21 @@ def create_algorithm(name, dim, lower_bound, upper_bound):
             a               = 2,
             F               = 0.8,
             CR              = 0.95
+        )
+    elif name == 'qlsdSCA':
+        from algorithms.qlsdsca import qlsdSCA
+        return qlsdSCA(
+            population_size = POPULATION,
+            max_iterations  = OPT_ITERATIONS,
+            dim             = dim,
+            lower_bound     = lower_bound,
+            upper_bound     = upper_bound,
+            a               = 2,
+            F               = 0.8,
+            CR              = 0.95,
+            alpha           = 0.3,
+            gamma           = 0.95,
+            epsilon         = 1.0
         )
     else:
         raise ValueError(f"Unknown algorithm: {name}")
@@ -255,107 +274,98 @@ def run_multiple(scenario_number,
 # PRINT RESULTS TABLE
 # ══════════════════════════════════════════════════════════════
 
-def print_results_table(results_sca, results_sdsca,
-                        scenario_number):
+def print_results_table(all_algo_results, scenario_number):
     """
-    Print comparison table like Tables 11-19 in paper.
+    Print comparison table for all algorithms.
+    Extended to support 3 algorithms.
+    """
+    num_runs   = list(all_algo_results.values())[0]['num_runs']
+    algo_names = list(all_algo_results.keys())
 
-    Parameters:
-    -----------
-    results_sca   : dict — averaged SCA results
-    results_sdsca : dict — averaged sdSCA results
-    scenario_number : int
-    """
-    print(f"\n{'=' * 65}")
+    print(f"\n{'=' * 75}")
     print(f"  SCENARIO {scenario_number} RESULTS "
-          f"(averaged over {results_sca['num_runs']} runs)")
-    print(f"{'=' * 65}")
+          f"(averaged over {num_runs} runs)")
+    print(f"{'=' * 75}")
 
-    # ── Per robot steps table ──────────────────────────────
-    NR = len(results_sca['avg_steps_per_robot'])
+    # ── Per robot steps ────────────────────────────────────
+    NR = len(list(
+        all_algo_results.values()
+    )[0]['avg_steps_per_robot'])
+
     print(f"\n  Average Required Steps per Robot:")
-    print(f"  {'Robot':<12} {'SCA':>10} {'sdSCA':>10} "
-          f"{'Improvement':>12}")
-    print(f"  {'-'*46}")
+    header = f"  {'Robot':<12}"
+    for name in algo_names:
+        header += f" {name:>10}"
+    print(header)
+    print(f"  {'-' * (12 + 11 * len(algo_names))}")
 
     for i in range(NR):
-        sca_steps   = results_sca['avg_steps_per_robot'][i]
-        sdsca_steps = results_sdsca['avg_steps_per_robot'][i]
-        imp = ((sca_steps - sdsca_steps) /
-               max(sca_steps, 1e-10)) * 100
-        print(f"  Robot #{i+1:<7} "
-              f"{sca_steps:>10.1f} "
-              f"{sdsca_steps:>10.1f} "
-              f"{imp:>11.1f}%")
+        row = f"  Robot #{i+1:<6}"
+        for name in algo_names:
+            val = all_algo_results[name][
+                'avg_steps_per_robot'
+            ][i]
+            row += f" {val:>10.1f}"
+        print(row)
 
-    # Totals
-    sca_total   = results_sca['avg_total_steps']
-    sdsca_total = results_sdsca['avg_total_steps']
-    imp_total   = ((sca_total - sdsca_total) /
-                   max(sca_total, 1e-10)) * 100
-    print(f"  {'-'*46}")
-    print(f"  {'Total':<12} "
-          f"{sca_total:>10.1f} "
-          f"{sdsca_total:>10.1f} "
-          f"{imp_total:>11.1f}%")
+    # Totals row
+    row = f"  {'Total':<12}"
+    for name in algo_names:
+        val = all_algo_results[name]['avg_total_steps']
+        row += f" {val:>10.1f}"
+    print(f"  {'-' * (12 + 11 * len(algo_names))}")
+    print(row)
 
-    # ── Per robot distance table ───────────────────────────
-    print(f"\n  Average Traveled Distance (cm) per Robot:")
-    print(f"  {'Robot':<12} {'SCA':>10} {'sdSCA':>10} "
-          f"{'Improvement':>12}")
-    print(f"  {'-'*46}")
-
-    for i in range(NR):
-        sca_dist   = results_sca['avg_dist_per_robot'][i]
-        sdsca_dist = results_sdsca['avg_dist_per_robot'][i]
-        imp = ((sca_dist - sdsca_dist) /
-               max(sca_dist, 1e-10)) * 100
-        print(f"  Robot #{i+1:<7} "
-              f"{sca_dist:>10.2f} "
-              f"{sdsca_dist:>10.2f} "
-              f"{imp:>11.1f}%")
-
-    sca_dist_total   = results_sca['avg_total_distance']
-    sdsca_dist_total = results_sdsca['avg_total_distance']
-    imp_dist = ((sca_dist_total - sdsca_dist_total) /
-                max(sca_dist_total, 1e-10)) * 100
-    print(f"  {'-'*46}")
-    print(f"  {'Total':<12} "
-          f"{sca_dist_total:>10.2f} "
-          f"{sdsca_dist_total:>10.2f} "
-          f"{imp_dist:>11.1f}%")
-
-    # ── Summary metrics table ──────────────────────────────
+    # ── Summary metrics ────────────────────────────────────
     print(f"\n  Summary Metrics:")
-    print(f"  {'Metric':<20} {'SCA':>12} {'sdSCA':>12} "
-          f"{'Improvement':>12}")
-    print(f"  {'-'*58}")
+    header = f"  {'Metric':<20}"
+    for name in algo_names:
+        header += f" {name:>12}"
+    print(header)
+    print(f"  {'-' * (20 + 13 * len(algo_names))}")
 
     metrics = [
-        ('APDE (cm)',
-         results_sca['avg_APDE'],
-         results_sdsca['avg_APDE']),
-        ('AUGD (cm)',
-         results_sca['avg_AUGD'],
-         results_sdsca['avg_AUGD']),
-        ('Total Fitness',
-         results_sca['avg_total_fitness'],
-         results_sdsca['avg_total_fitness']),
-        ('AET (s)',
-         results_sca['avg_AET'],
-         results_sdsca['avg_AET']),
+        ('APDE (cm)',    'avg_APDE'),
+        ('AUGD (cm)',    'avg_AUGD'),
+        ('Total Fitness','avg_total_fitness'),
+        ('AET (s)',      'avg_AET'),
     ]
 
-    for name, sca_val, sdsca_val in metrics:
-        imp = ((sca_val - sdsca_val) /
-               max(abs(sca_val), 1e-10)) * 100
-        winner = "✅" if imp > 0 else "❌"
-        print(f"  {name:<20} "
-              f"{sca_val:>12.2f} "
-              f"{sdsca_val:>12.2f} "
-              f"{imp:>11.1f}% {winner}")
+    for label, key in metrics:
+        row    = f"  {label:<20}"
+        values = []
 
-    print(f"{'=' * 65}")
+        for name in algo_names:
+            val = all_algo_results[name][key]
+            values.append(val)
+            row += f" {val:>12.2f}"
+
+        # Best value indicator
+        best_val = min(values)
+        best_idx = values.index(best_val)
+        row     += f"  ← {algo_names[best_idx]} best"
+
+        print(row)
+
+    # ── qlsdSCA vs sdSCA improvement ──────────────────────
+    if 'qlsdSCA' in all_algo_results and \
+       'sdSCA'   in all_algo_results:
+
+        print(f"\n  qlsdSCA improvements over sdSCA:")
+        print(f"  {'-' * 40}")
+
+        for label, key in metrics:
+            sdsca_val = all_algo_results['sdSCA'][key]
+            ql_val    = all_algo_results['qlsdSCA'][key]
+
+            if abs(sdsca_val) > 1e-10:
+                imp = ((sdsca_val - ql_val) /
+                        abs(sdsca_val)) * 100
+                symbol = '✅' if imp > 0 else '❌'
+                print(f"  {label:<20} "
+                      f"{imp:>+8.2f}% {symbol}")
+
+    print(f"{'=' * 75}")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -395,58 +405,45 @@ def save_results(results, scenario_number, algorithm_name):
 # ══════════════════════════════════════════════════════════════
 
 def main():
-    """
-    Main function — run all scenarios and print results.
-    """
-    print("=" * 65)
-    print("  sdSCA vs SCA — Path Planning Experiments")
-    print(f"  Runs per experiment : {NUM_RUNS}")
-    print(f"  Max steps           : {MAX_STEPS}")
-    print(f"  Optimizer iterations: {OPT_ITERATIONS}")
-    print("=" * 65)
+    """Main function"""
+
+    print("=" * 75)
+    print("  qlsdSCA vs sdSCA vs SCA — Path Planning")
+    print(f"  Runs: {NUM_RUNS} | "
+          f"Max steps: {MAX_STEPS} | "
+          f"Opt iterations: {OPT_ITERATIONS}")
+    print("=" * 75)
 
     total_start = time.time()
-
-    # Store all results
     all_results = {}
 
     for scenario_num in SCENARIOS:
 
-        print(f"\n{'#' * 65}")
+        print(f"\n{'#' * 75}")
         print(f"  SCENARIO {scenario_num}")
-        print(f"{'#' * 65}")
+        print(f"{'#' * 75}")
 
         scenario_results = {}
 
         for algo_name in ALGORITHMS:
-
             results = run_multiple(
                 scenario_num,
                 algo_name,
                 num_runs=NUM_RUNS
             )
-
             scenario_results[algo_name] = results
-
-            # Save to CSV
             save_results(results, scenario_num, algo_name)
 
-        # Print comparison table
-        print_results_table(
-            scenario_results['SCA'],
-            scenario_results['sdSCA'],
-            scenario_num
-        )
-
+        # Print comparison table with all algorithms
+        print_results_table(scenario_results, scenario_num)
         all_results[scenario_num] = scenario_results
 
-    # Final summary
     total_time = time.time() - total_start
-    print(f"\n{'=' * 65}")
+    print(f"\n{'=' * 75}")
     print(f"  All experiments complete!")
     print(f"  Total time: {total_time/60:.1f} minutes")
-    print(f"  Results saved in: results/scenarios/")
-    print(f"{'=' * 65}")
+    print(f"  Results in: results/scenarios/")
+    print(f"{'=' * 75}")
 
     return all_results
 
