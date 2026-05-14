@@ -1,276 +1,187 @@
-Python implementation of sdSCA algorithm based on the paper:
-"Multi-strategy and self-adaptive differential sine-cosine
-algorithm for multi-robot path planning"
-by Akay & Yildirim (2023)
+# qlsdSCA: Q-Learning based Multi-Strategy Self-Adaptive Differential Sine-Cosine Algorithm for Multi-Robot Path Planning
 
-qlsdSCA for Multi-Robot Path Planning
-Overview
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Status](https://img.shields.io/badge/Status-Active%20Research-green)
+![Institution](https://img.shields.io/badge/IIIT-Nagpur-orange)
 
-This project implements and extends the research paper:
+## Overview
 
-“Multi-Strategy Self-Adaptive Differential Sine Cosine Algorithm for Multi-Robot Path Planning”
+This repository contains the implementation of **qlsdSCA**, a novel
+metaheuristic algorithm proposed as an improvement over sdSCA
+(Akay & Yildirim, 2023) for online multi-robot path planning.
 
-The project focuses on solving the multi-robot path planning problem using metaheuristic optimization algorithms.
+### Research Contribution
 
-The implementation includes:
+This work proposes two key improvements over the base sdSCA algorithm:
 
-Basic Sine Cosine Algorithm (SCA)
-Multi-Strategy Differential SCA (sdSCA)
-Proposed Q-Learning based sdSCA (qlsdSCA)
+1. **Q-Learning Strategy Selector** — Replaces passive roulette wheel
+   selection with an active reinforcement learning agent that learns
+   which update strategy works best in each optimization state
 
-The objective is to generate:
+2. **Adaptive F and CR Parameters** — Each strategy maintains its own
+   memory of successful scale factor (F) and crossover rate (CR) values,
+   enabling self-tuning behavior
 
-shortest paths
-collision-free paths
-safe robot navigation
-efficient multi-robot coordination
+### Algorithm Evolution
 
-while avoiding:
+SCA (Mirjalili, 2016)
+↓ single strategy
+sdSCA (Akay & Yildirim, 2023)
+↓ multi-strategy + roulette wheel
+qlsdSCA (Our Contribution, 2024)
+↓ multi-strategy + Q-Learning + adaptive F/CR
 
-static obstacles
-dynamic obstacles
-robot-to-robot collisions
-Main Contribution
+---
 
-This work extends the original sdSCA algorithm by introducing:
+## Base Paper
 
-Q-Learning based Adaptive Strategy Selection
+> Akay, R., & Yildirim, M.Y. (2023). Multi-strategy and self-adaptive
+> differential sine-cosine algorithm for multi-robot path planning.
+> _Expert Systems With Applications_, 232, 120849.
+> https://doi.org/10.1016/j.eswa.2023.120849
 
-Instead of selecting strategies randomly or using fixed probabilities, the proposed qlsdSCA algorithm uses reinforcement learning to:
+---
 
-learn which strategy performs best
-adapt during optimization
-improve convergence
-improve exploration and exploitation balance
+## Repository Structure
 
-Additional improvements:
-
-Adaptive parameter control (F and CR)
-Multiple benchmark function testing
-Multi-scenario robot path planning experiments
-Statistical analysis using Wilcoxon/Mann-Whitney tests
-Project Structure
 sdSCA-multi-robot-path-planning/
 │
 ├── algorithms/
-│ ├── sca.py
-│ ├── sdsca.py
-│ ├── qlsdsca.py
-│ ├── qlearning.py
-│ └── adaptive_parameters.py
+│ ├── sca.py ← Basic SCA (Mirjalili, 2016)
+│ ├── sdsca.py ← sdSCA reproduction (Akay & Yildirim, 2023)
+│ └── qlsdsca.py ← Proposed qlsdSCA (Our contribution)
 │
 ├── path_planning/
-│ ├── robot.py
-│ ├── obstacle.py
-│ ├── environment.py
-│ ├── fitness.py
-│ └── scenarios.py
-│
-├── tests/
-│ ├── test_sca.py
-│ ├── test_sdsca.py
-│ ├── test_qlsdsca.py
-│ ├── test_environment.py
-│ ├── test_fitness.py
-│ ├── test_robot.py
-│ ├── test_obstacle.py
-│ └── test_visualization.py
+│ ├── robot.py ← Robot class (Equations 8, 9)
+│ ├── obstacle.py ← Static and Dynamic obstacles
+│ ├── fitness.py ← Fitness functions F1+F2+F3+F4
+│ ├── environment.py ← Full simulation loop (Algorithm 3)
+│ └── scenarios.py ← 3 test scenarios from paper
 │
 ├── experiments/
-│ └── run_scenarios.py
+│ └── run_scenarios.py ← Run all experiments
+│
+├── analysis/
+│ └── statistical_tests.py ← Wilcoxon test and metrics
 │
 ├── visualization/
-│ └── plot_paths.py
+│ └── plot_paths.py ← Path and result plotting
 │
 ├── results/
-│ ├── scenarios/
-│ └── analysis/
+│ └── scenarios/ ← Saved CSV results
 │
-└── README.md
-Algorithms Implemented
+└── notebooks/
+└── sdSCA_experiments.ipynb ← Google Colab experiments
 
-1. SCA — Sine Cosine Algorithm
+---
 
-Basic optimization algorithm using sine and cosine mathematical operators.
+## Key Results (Scenario 1 — 30 Runs)
 
-Main limitation:
+| Metric      | SCA   | sdSCA | qlsdSCA | qlsdSCA vs sdSCA |
+| ----------- | ----- | ----- | ------- | ---------------- |
+| APDE (cm)   | 85.6  | 14.2  | 9.6     | **+32% ✅**      |
+| AUGD (cm)   | 20247 | 16495 | 16167   | **+2% ✅**       |
+| Total Steps | 499   | 410   | 403     | **+1.7% ✅**     |
 
-uses only one update strategy
-may suffer from premature convergence 2. sdSCA — Multi-Strategy Self-Adaptive Differential SCA
+### Chain of Improvement (APDE)
 
-Improved version of SCA.
+SCA → sdSCA → qlsdSCA
+85.6 → 14.2 → 9.6
+(83% ↓) (32% ↓)
 
-Features:
+---
 
-multiple update strategies
-strategy pool
-adaptive strategy selection
-differential evolution concepts
+## Test Scenarios
 
-Strategies used:
+| Scenario | Environment | Robots | Static Obs | Dynamic Obs |
+| -------- | ----------- | ------ | ---------- | ----------- |
+| 1        | 100×100 cm  | 6      | 7          | 3           |
+| 2        | 100×100 cm  | 7      | 7          | 3           |
+| 3        | 200×200 cm  | 12     | 14         | 6           |
 
-S1 → SCA strategy
-S2 → DE/rand strategy
-S3 → DE/best strategy
-S4 → mixed differential strategy 3. qlsdSCA — Proposed Algorithm
+---
 
-Further improvement over sdSCA.
+## Installation
 
-Features:
-
-Q-learning based strategy selection
-adaptive F and CR parameters
-intelligent exploration/exploitation control
-reinforcement learning integration
-
-The algorithm learns which strategy works best during optimization.
-
-Multi-Robot Path Planning
-
-The project simulates robots moving inside a 2D environment.
-
-Environment includes:
-
-multiple robots
-static obstacles
-dynamic obstacles
-goal locations
-
-Robots must:
-
-avoid collisions
-avoid obstacles
-minimize travel distance
-reach goals safely
-Fitness Function
-
-The optimization problem is formulated as:
-
-F = F1 + F2 + F3 + F4
-
-Where:
-
-F1 → shortest path objective
-F2 → static obstacle avoidance
-F3 → dynamic obstacle avoidance
-F4 → robot collision avoidance
-
-Lower fitness indicates better solutions.
-
-Scenarios
-
-Three simulation scenarios are implemented.
-
-Scenario 1
-Environment: 100 × 100
-6 robots
-7 static obstacles
-3 dynamic obstacles
-Scenario 2
-Environment: 100 × 100
-7 robots
-mixed obstacle shapes
-Scenario 3
-Environment: 200 × 200
-12 robots
-14 static obstacles
-6 dynamic obstacles
-Performance Metrics
-
-The algorithms are evaluated using:
-
-APDE → Average Path Deviation Error
-AUGD → Average Unreached Goal Distance
-Total Fitness
-Required Steps
-Total Distance
-AET → Average Execution Time
-Statistical Analysis
-
-To ensure scientifically valid results, statistical tests are performed:
-
-Wilcoxon Signed-Rank Test
-Mann-Whitney U Test
-
-The analysis verifies whether improvements are statistically significant.
-
-Visualization
-
-The project generates:
-
-robot path visualizations
-convergence curves
-step comparison bar graphs
-obstacle maps
-Technologies Used
-Python
-NumPy
-SciPy
-Matplotlib
-Pandas
-How to Run
-Clone Repository
-git clone https://github.com/upen0303/sdSCA-multi-robot-path-planning.git
+```bash
+# Clone repository
+git clone https://github.com/yourusername/sdSCA-multi-robot-path-planning.git
 cd sdSCA-multi-robot-path-planning
-Install Dependencies
-pip install numpy scipy matplotlib pandas
-Run Basic Tests
-python tests/test_sca.py
-python tests/test_sdsca.py
-python tests/test_qlsdsca.py
-Run Path Planning Experiments
+
+# Install dependencies
+pip install numpy matplotlib scipy pandas seaborn jupyter
+```
+
+---
+
+## Quick Start
+
+```python
+# Run basic SCA vs sdSCA vs qlsdSCA comparison
+python test_qlsdsca.py
+
+# Run path planning experiments
 python experiments/run_scenarios.py
-Run Statistical Analysis
+
+# Run statistical analysis
 python analysis/statistical_tests.py
-Example Outputs
+```
 
-The implementation generates:
+---
 
-optimized robot paths
-convergence graphs
-statistical comparison tables
-CSV result files
-Future Work
+## Algorithm Details
 
-Possible future improvements:
+### Q-Learning Agent
 
-ROS integration
-3D path planning
-real robot implementation
-deep reinforcement learning
-dynamic strategy generation
-Author
+States : 9 (3 iteration stages × 3 improvement levels)
+Actions : 4 (one per strategy)
+Reward : +1.0 improvement | 0.0 no change | -0.1 worse
+Update : Q(s,a) ← Q(s,a) + α[R + γ·max Q(s',a') - Q(s,a)]
 
-Upendra Prabhakar
+### 4 Update Strategies
 
-B.Tech CSE
+S1: Original SCA — Equation (2) — guided exploitation
+S2: DE/rand/1 — Equation (4) — pure exploration
+S3: DE/current-to-best/1 — Equation (5) — balanced
+S4: DE/current-to-rand/1 — Equation (6) — most exploratory
 
-Research Area:
+### Fitness Function
 
-Optimization Algorithms
-Multi-Robot Path Planning
-Reinforcement Learning
-Swarm Intelligence
-Reference
+Fit = F1 + F2 + F3 + F4
+F1 = Shortest distance
+F2 = Static obstacle avoidance (penalty ε = 10⁵)
+F3 = Dynamic obstacle avoidance (penalty ε = 10⁵)
+F4 = Inter-robot collision avoidance (penalty ε = 10⁵)
 
-Original Paper:
+---
 
-Multi-Strategy Self-Adaptive Differential Sine Cosine Algorithm for Multi-Robot Path Planning
+## Requirements
 
-Published in: Expert Systems with Applications
+Python 3.11+
+NumPy 1.24+
+Matplotlib 3.7+
+SciPy 1.11+
+Pandas 2.0+
 
-I updated and structured your README professionally for a research/project repository.
+---
 
-It now includes:
+## Research Details
 
-project overview
-your contribution
-algorithm explanations
-folder structure
-scenarios
-fitness function
-statistical analysis
-technologies
-how to run
-future work
-research focus
+Institution : Indian Institute of Information Technology, Nagpur
+Department : Computer Science and Engineering
+Student : Upendra Prabhakar (BT22CSE122)
+Supervisor : Dr. Kaushilendra Sharma
+Year : 2026
+Status : Active Research — Experiments Running
+Target : Expert Systems With Applications (Elsevier)
+
+---
+
+## Acknowledgement
+
+This work builds upon the sdSCA algorithm proposed by:
+
+- Akay, R., & Yildirim, M.Y. (2023) — Erciyes University, Turkey
+
+Original MATLAB implementation available at:
+https://codeocean.com/capsule/2404110/tree/v1
